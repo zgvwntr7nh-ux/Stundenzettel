@@ -1,0 +1,1116 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stundenzettel</title>
+<meta name="description" content="Schichten eintragen und den Stundenzettel als PDF erstellen">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D1118" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stundenzettel">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --desk: #ECEFF4;
+    --paper: #FFFFFF;
+    --ink: #161C2B;
+    --muted: #586276;
+    --faint: #8790A3;
+    --line: #D6DBE4;
+    --pen: #2443B5;
+    --pen-strong: #1B3696;
+    --on-pen: #FFFFFF;
+    --pen-soft: #E5EAFA;
+    --ok: #17734A;
+    --danger: #B42318;
+    --danger-soft: #FBE8E6;
+    --sheet-shadow: 0 1px 2px rgba(22, 28, 43, .08), 0 14px 34px -12px rgba(22, 28, 43, .28);
+    --ui: "Instrument Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --desk: #0D1118;
+      --paper: #161B26;
+      --ink: #E7EAF1;
+      --muted: #A3ACBD;
+      --faint: #6F798D;
+      --line: #283042;
+      --pen: #93A9FF;
+      --pen-strong: #B7C6FF;
+      --on-pen: #0D1118;
+      --pen-soft: #1C2646;
+      --ok: #5CC891;
+      --danger: #FF8E84;
+      --danger-soft: #3A1F1F;
+      --sheet-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 16px 40px -14px rgba(0, 0, 0, .75);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --desk: #0D1118;
+    --paper: #161B26;
+    --ink: #E7EAF1;
+    --muted: #A3ACBD;
+    --faint: #6F798D;
+    --line: #283042;
+    --pen: #93A9FF;
+    --pen-strong: #B7C6FF;
+    --on-pen: #0D1118;
+    --pen-soft: #1C2646;
+    --ok: #5CC891;
+    --danger: #FF8E84;
+    --danger-soft: #3A1F1F;
+    --sheet-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 16px 40px -14px rgba(0, 0, 0, .75);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { background: var(--desk); }
+  body {
+    margin: 0;
+    color: var(--ink);
+    font: 400 16px/1.45 var(--ui);
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  button, input, textarea, output { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--pen); outline-offset: 2px; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; opacity: 0; }
+
+  .app {
+    max-width: 1060px; margin: 0 auto;
+    padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 18px calc(104px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Kopf */
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; padding-block: 6px 20px; }
+  .brand h1 { margin: 0; font-size: 1.75rem; line-height: 1.1; font-weight: 700; letter-spacing: -0.015em; }
+  .brand p { margin: 4px 0 0; color: var(--muted); font-size: .95rem; }
+  .monthnav { display: flex; align-items: center; gap: 2px; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+  .monthnav button { width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; font: 500 1.4rem/1 var(--ui); display: grid; place-items: center; }
+  .monthnav button:hover { background: var(--pen-soft); }
+  .monthnav output { min-width: 9.2em; text-align: center; font-weight: 600; }
+
+  .banner { margin: 0 0 18px; padding: 12px 14px; border-radius: 12px; background: var(--pen-soft); font-size: .95rem; }
+  .banner.warn { background: var(--danger-soft); }
+
+  .eyebrow { margin: 0; font-size: .78rem; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  .fine { margin: 0; font-size: .88rem; color: var(--muted); }
+
+  /* Raster */
+  .layout { display: grid; gap: 28px; grid-template-areas: "entry" "list" "sheet" "more"; }
+  .entry { grid-area: entry; }
+  .monthsec { grid-area: list; min-width: 0; }
+  .sheet { grid-area: sheet; }
+  .more { grid-area: more; min-width: 0; }
+  @media (min-width: 920px) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-areas: "entry sheet" "list sheet" "more sheet";
+      grid-template-rows: auto auto 1fr;
+      column-gap: 40px;
+    }
+    .sheet { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); align-self: start; }
+  }
+
+  /* Eintragen */
+  .entry { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 16px; min-width: 0; }
+  .entry-top { display: grid; gap: 10px; }
+  .date-big { margin: 0; font-size: 1.4rem; font-weight: 600; line-height: 1.2; text-wrap: balance; }
+  .date-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .chip { height: 40px; padding: 0 15px; border-radius: 999px; border: 1px solid var(--line); background: transparent; font-weight: 500; }
+  .chip[aria-pressed="true"] { background: var(--pen-soft); border-color: transparent; color: var(--pen-strong); }
+  .date-input { height: 40px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent; font-size: 1rem; min-width: 0; max-width: 100%; }
+
+  .times { border: 1px solid var(--line); border-radius: 14px; }
+  .time { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 8px 8px 14px; min-width: 0; }
+  .time + .time { border-top: 1px solid var(--line); }
+  .stepper { display: flex; align-items: center; gap: 2px; flex: none; }
+  .step { width: 44px; height: 44px; flex: none; border-radius: 50%; border: 1px solid var(--line); background: transparent; font: 500 1.35rem/1 var(--mono); display: grid; place-items: center; }
+  .step:active { background: var(--pen-soft); }
+  .time-input {
+    width: 3.7em; min-width: 0; height: 50px; border: 0; padding: 0; background: transparent;
+    text-align: center; font: 600 1.7rem/1 var(--mono); font-variant-numeric: tabular-nums;
+    -webkit-appearance: none; appearance: none;
+  }
+  .time-input::-webkit-datetime-edit { padding: 0; }
+  .time-input::-webkit-date-and-time-value { text-align: center; }
+  .time-input::-webkit-calendar-picker-indicator { display: none; }
+  .duration { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line); }
+  .duration output { font: 600 1.15rem var(--mono); color: var(--pen); }
+
+  .actions { display: flex; gap: 10px; }
+  .btn { height: 52px; border-radius: 14px; border: 0; padding: 0 18px; font-weight: 600; font-size: 1.02rem; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-pen { flex: 1; background: var(--pen); color: var(--on-pen); }
+  .btn-ink { width: 100%; background: var(--ink); color: var(--paper); }
+  .btn-quiet { background: transparent; border: 1px solid var(--line); color: var(--danger); }
+  .btn-quiet.armed { background: var(--danger); border-color: transparent; color: var(--paper); }
+  .msg { margin: 0; min-height: 1.35em; font-size: .92rem; color: var(--muted); }
+  .msg:empty { min-height: 0; }
+  .entry > .msg:empty { margin-top: -16px; }
+  .msg.err { color: var(--danger); }
+
+  /* Monat */
+  .month-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .month-head h2, .sheet-head h2 { margin: 0; font-size: 1.15rem; font-weight: 600; }
+  .summary { margin: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .summary b { color: var(--ink); font-weight: 600; }
+  .list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  .row {
+    width: 100%; min-height: 50px; display: grid; grid-template-columns: 5.4em minmax(0, 1fr) auto; gap: 12px;
+    align-items: center; padding: 10px 8px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left;
+  }
+  .row:hover { background: var(--pen-soft); }
+  .row[aria-current="true"] { background: var(--pen-soft); box-shadow: inset 3px 0 0 var(--pen); }
+  .row .d { font-weight: 600; }
+  .row .t, .row .h { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .row .h { color: var(--muted); }
+  .empty { margin: 12px 0 0; color: var(--muted); }
+
+  /* Zettel */
+  .sheet { display: grid; gap: 14px; min-width: 0; }
+  .sheet-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; }
+  .paper { width: 100%; max-width: 100%; aspect-ratio: 210 / 297; background: #fff; border-radius: 4px; box-shadow: var(--sheet-shadow); overflow: hidden; }
+  .paper svg { display: block; width: 100%; height: 100%; }
+
+  /* Aufklappbar */
+  .fold { border-top: 1px solid var(--line); }
+  .fold:last-child { border-bottom: 1px solid var(--line); }
+  .fold > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 2px; font-weight: 600; }
+  .fold > summary::-webkit-details-marker { display: none; }
+  .fold > summary::after { content: "+"; font: 500 1.3rem/1 var(--mono); color: var(--muted); }
+  .fold[open] > summary::after { content: "\2212"; }
+  .fold-body { display: grid; gap: 12px; padding: 0 2px 20px; }
+  textarea, .text-input { width: 100%; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); padding: 10px 12px; font-size: 1rem; }
+  textarea { min-height: 8.5em; resize: vertical; font-family: var(--mono); line-height: 1.5; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn-line { position: relative; display: inline-flex; align-items: center; height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); font-weight: 600; padding: 0 16px; justify-self: start; max-width: 100%; cursor: pointer; }
+  .btn-line:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-line:focus-within { outline: 3px solid var(--pen); outline-offset: 2px; }
+  .results { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .results:empty { display: none; }
+  .results li { display: grid; grid-template-columns: 1.4em minmax(0, 1fr); gap: 8px; }
+  .results .ico { font-family: var(--mono); font-weight: 600; }
+  .results .main { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .results .sub { display: block; color: var(--muted); font-size: .88rem; }
+  .is-new .ico { color: var(--ok); }
+  .is-chg .ico { color: var(--pen); }
+  .is-same { color: var(--faint); }
+  .is-bad .ico { color: var(--danger); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 10;
+    transform: translate(-50%, 16px); opacity: 0; pointer-events: none;
+    max-width: calc(100vw - 32px); padding: 12px 18px; border-radius: 12px;
+    background: var(--ink); color: var(--paper); font-weight: 500; box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Stundenzettel</h1>
+      <p id="who">Arbeitserfassung</p>
+    </div>
+    <nav class="monthnav" aria-label="Monat wählen">
+      <button type="button" id="prev" aria-label="Vorheriger Monat">‹</button>
+      <output id="monthLabel" aria-live="polite"></output>
+      <button type="button" id="next" aria-label="Nächster Monat">›</button>
+    </nav>
+  </header>
+
+  <p class="banner" id="banner" hidden></p>
+
+  <main class="layout">
+    <section class="entry" aria-labelledby="entryTitle">
+      <div class="entry-top">
+        <p class="eyebrow" id="entryTitle">Schicht eintragen</p>
+        <p class="date-big" id="dateText"></p>
+        <div class="date-row">
+          <button type="button" class="chip" id="today" aria-pressed="false">Heute</button>
+          <button type="button" class="chip" id="yesterday" aria-pressed="false">Gestern</button>
+          <input type="date" class="date-input" id="date" aria-label="Datum">
+        </div>
+      </div>
+      <div class="times">
+        <div class="time">
+          <label class="eyebrow" for="start">Beginn</label>
+          <div class="stepper">
+            <button type="button" class="step" data-field="start" data-delta="-15" aria-label="Beginn 15 Minuten früher">−</button>
+            <input type="time" class="time-input" id="start">
+            <button type="button" class="step" data-field="start" data-delta="15" aria-label="Beginn 15 Minuten später">+</button>
+          </div>
+        </div>
+        <div class="time">
+          <label class="eyebrow" for="end">Ende</label>
+          <div class="stepper">
+            <button type="button" class="step" data-field="end" data-delta="-15" aria-label="Ende 15 Minuten früher">−</button>
+            <input type="time" class="time-input" id="end">
+            <button type="button" class="step" data-field="end" data-delta="15" aria-label="Ende 15 Minuten später">+</button>
+          </div>
+        </div>
+        <div class="duration">
+          <span class="eyebrow">Dauer</span>
+          <output id="duration" for="start end"></output>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-pen" id="save">Speichern</button>
+        <button type="button" class="btn btn-quiet" id="del" hidden>Löschen</button>
+      </div>
+      <p class="msg" id="formMsg" role="status"></p>
+    </section>
+
+    <section class="monthsec" aria-labelledby="listTitle">
+      <div class="month-head">
+        <h2 id="listTitle"></h2>
+        <p class="summary" id="summary"></p>
+      </div>
+      <ul class="list" id="list"></ul>
+      <p class="empty" id="empty">Lade deine Einträge …</p>
+    </section>
+
+    <section class="sheet" aria-labelledby="sheetTitle">
+      <div class="sheet-head">
+        <h2 id="sheetTitle">Zettel zum Ausdrucken</h2>
+        <p class="fine" id="sheetFacts"></p>
+      </div>
+      <div class="paper" id="paper"></div>
+      <button type="button" class="btn btn-ink" id="pdf">PDF erstellen</button>
+      <p class="fine" id="pdfHint">Im Teilen-Menü findest du danach „Drucken“.</p>
+    </section>
+
+    <div class="more">
+      <details class="fold" id="importFold">
+        <summary>Aus Notizen übernehmen</summary>
+        <div class="fold-body">
+          <p class="fine">Kopiere deine Notizen hier hinein, eine Schicht pro Zeile, zum Beispiel „14.10. 15:30-18:00“. Die Stunden werden automatisch berechnet.</p>
+          <textarea id="notes" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Notizen" placeholder="1.10. 15:30-18:00&#10;6.10. 15:15 - 17:45"></textarea>
+          <button type="button" class="btn-line" id="parse">Einträge erkennen</button>
+          <ul class="results" id="results"></ul>
+          <button type="button" class="btn btn-pen" id="apply" hidden>Übernehmen</button>
+        </div>
+      </details>
+      <details class="fold" id="settingsFold">
+        <summary>Einstellungen und Sicherung</summary>
+        <div class="fold-body">
+          <label class="eyebrow" for="name">Name auf dem Zettel</label>
+          <input type="text" class="text-input" id="name" autocomplete="name" placeholder="Vor- und Nachname">
+          <p class="msg" id="nameMsg" role="status"></p>
+          <p class="eyebrow">Sicherung</p>
+          <p class="fine">Deine Einträge liegen nur auf diesem Gerät. Sichere sie ab und zu, zum Beispiel in iCloud Drive. Wenn du das Icon vom Home-Bildschirm löschst, sind die Einträge weg.</p>
+          <div class="btn-row">
+            <button type="button" class="btn-line" id="csv">Sicherung teilen</button>
+            <label class="btn-line" for="restore">Sicherung einspielen<input type="file" id="restore" class="visually-hidden" accept=".csv,text/csv,text/comma-separated-values,text/plain"></label>
+          </div>
+          <p class="fine" id="backupInfo"></p>
+          <p class="fine">Schrift auf dem Zettel: Zettel Sans, abgeleitet von Carlito (SIL Open Font License 1.1).</p>
+        </div>
+      </details>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ---------- Kalender und Formate ---------- */
+  const MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+  const MONTHS_SHEET = ["Jan", "Feb", "Mrz", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+  const WEEKDAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+  const WD_SHORT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+  const hoursFmt = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 });
+
+  const pad = n => String(n).padStart(2, "0");
+  const iso = (y, m0, d) => `${y}-${pad(m0 + 1)}-${pad(d)}`;
+  const isIsoDate = s => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
+  const dateOf = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+  const isoOf = dt => iso(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  const todayIso = () => isoOf(new Date());
+  const addDays = (s, n) => { const dt = dateOf(s); dt.setDate(dt.getDate() + n); return isoOf(dt); };
+  const daysIn = (y, m0) => new Date(y, m0 + 1, 0).getDate();
+  const isTime = t => typeof t === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(t);
+  const toMin = t => isTime(t) ? Number(t.slice(0, 2)) * 60 + Number(t.slice(3)) : NaN;
+  const fromMin = n => `${pad(Math.floor(n / 60))}:${pad(n % 60)}`;
+  const durMin = e => toMin(e.ende) - toMin(e.beginn);
+  const fmtHours = min => hoursFmt.format(Math.round(min / 60 * 100) / 100);
+  const hoursLabel = min => min === 60 ? "1 Stunde" : `${fmtHours(min)} Stunden`;
+  const shiftsLabel = n => `${n} ${n === 1 ? "Schicht" : "Schichten"}`;
+  const longDate = s => {
+    const dt = dateOf(s);
+    const year = dt.getFullYear() !== new Date().getFullYear() ? ` ${dt.getFullYear()}` : "";
+    return `${WEEKDAYS[dt.getDay()]}, ${dt.getDate()}. ${MONTHS[dt.getMonth()]}${year}`;
+  };
+  const shortDate = s => { const dt = dateOf(s); return `${WD_SHORT[dt.getDay()]} ${pad(dt.getDate())}.${pad(dt.getMonth() + 1)}.`; };
+  const dotDate = s => { const dt = dateOf(s); return `${pad(dt.getDate())}.${pad(dt.getMonth() + 1)}.${dt.getFullYear()}`; };
+  const monthKey = (y, m0) => `${y}-${pad(m0 + 1)}-`;
+  const pdfFileName = (y, m0) => `Stundenzettel ${MONTHS[m0]} ${y}.pdf`;
+
+  /* ---------- Der Zettel: Maße in mm, nachgemessen am Original (A4) ---------- */
+  const PT = 0.352778; // mm je Punkt
+  const L = {
+    cols: [42.83, 53.10, 84.99, 120.97, 144.39], // Tag | Wochentag | Arbeitszeit | Stunden
+    headerTop: 36.2, rowTop: 42.7, rowH: 5.821, rows: 32, grid: 0.28,
+    left: 17.0, titleY: 24.5, nameY: 34.0, nameX: 54.13, monthRight: 119.7,
+    topSize: 22, headSize: 15.4, bodySize: 11.6,
+    headPad: 1.0, headBase: 1.65, bodyBase: 1.35, numPad: 0.86, dayPad: 0.65,
+    sig1: 4.2, sig2: 14.9, sigLine: 2.2, sigX: [120.97, 191.9], sigW: 0.5,
+  };
+
+  function drawSheet(R, d) {
+    const [x0, x1, x2, x3, x4] = L.cols;
+    R.text("Arbeitserfassung", L.left, L.titleY, L.topSize, true, "left");
+    R.text(`${MONTHS_SHEET[d.m0]} ${pad(d.y % 100)}`, L.monthRight, L.titleY, L.topSize, false, "right");
+    R.text("Name:", L.left, L.nameY, L.topSize, true, "left");
+    if (d.name) R.text(d.name, L.nameX, L.nameY, L.topSize, false, "left");
+
+    R.line(x2, L.headerTop, x4, L.headerTop, L.grid);
+    for (const x of [x2, x3, x4]) R.line(x, L.headerTop, x, L.rowTop, L.grid);
+    R.text("Arbeitszeit", x2 + L.headPad, L.rowTop - L.headBase, L.headSize, false, "left");
+    R.text("Stunden", x3 + L.headPad, L.rowTop - L.headBase, L.headSize, false, "left");
+
+    const bottom = L.rowTop + L.rows * L.rowH;
+    for (let i = 0; i <= L.rows; i++) {
+      const y = L.rowTop + i * L.rowH;
+      R.line(x0, y, x4, y, L.grid);
+    }
+    for (const x of L.cols) R.line(x, L.rowTop, x, bottom, L.grid);
+
+    let total = 0;
+    for (let day = 1; day <= daysIn(d.y, d.m0); day++) {
+      const base = L.rowTop + day * L.rowH - L.bodyBase;
+      R.text(String(day), x1 - L.numPad, base, L.bodySize, false, "right");
+      R.text(WEEKDAYS[new Date(d.y, d.m0, day).getDay()], x1 + L.dayPad, base, L.bodySize, false, "left");
+      const e = d.entries.get(iso(d.y, d.m0, day));
+      if (e) {
+        const min = durMin(e);
+        total += min;
+        R.text(`${e.beginn} – ${e.ende}`, (x2 + x3) / 2, base, L.bodySize, false, "center");
+        R.text(fmtHours(min), (x3 + x4) / 2, base, L.bodySize, false, "center");
+      }
+    }
+    R.text(fmtHours(total), (x3 + x4) / 2, bottom - L.bodyBase, L.bodySize, false, "center");
+
+    const s1 = bottom + L.sig1, s2 = bottom + L.sig2;
+    R.text("Datum und Unterschrift Arbeitnehmer", L.left, s1, L.headSize, false, "left");
+    R.line(L.sigX[0], s1 + L.sigLine, L.sigX[1], s1 + L.sigLine, L.sigW);
+    R.text("Datum und Unterschrift Arbeitgeber", L.left, s2, L.headSize, false, "left");
+    R.line(L.sigX[0], s2 + L.sigLine, L.sigX[1], s2 + L.sigLine, L.sigW);
+  }
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const r3 = n => Math.round(n * 1000) / 1000;
+
+  function svgRenderer() {
+    const lines = [], texts = [];
+    const anchor = { left: "start", right: "end", center: "middle" };
+    return {
+      line(xa, ya, xb, yb, w) {
+        lines.push(`<line x1="${r3(xa)}" y1="${r3(ya)}" x2="${r3(xb)}" y2="${r3(yb)}" stroke-width="${w}"/>`);
+      },
+      text(s, x, y, size, bold, align) {
+        texts.push(`<text x="${r3(x)}" y="${r3(y)}" font-size="${r3(size * PT)}"${bold ? ' font-weight="700"' : ""} text-anchor="${anchor[align]}">${esc(s)}</text>`);
+      },
+      markup(label) {
+        return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 297" role="img" aria-label="${esc(label)}">` +
+          `<rect width="210" height="297" fill="#fff"/>` +
+          `<g stroke="#000" stroke-linecap="square" fill="none">${lines.join("")}</g>` +
+          `<g fill="#000" font-family="'Zettel Sans', Calibri, Carlito, 'Helvetica Neue', Arial, sans-serif" style="font-kerning:none">${texts.join("")}</g></svg>`;
+      },
+    };
+  }
+
+  function pdfRenderer(doc, family, scale) {
+    return {
+      line(xa, ya, xb, yb, w) { doc.setLineWidth(w); doc.line(xa, ya, xb, yb); },
+      text(s, x, y, size, bold, align) {
+        doc.setFont(family, bold ? "bold" : "normal");
+        doc.setFontSize(size * scale);
+        doc.text(s, x, y, align === "left" ? undefined : { align });
+      },
+    };
+  }
+
+  /* ---------- Schrift und PDF-Bibliothek ---------- */
+  const JSPDF_URL = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+  const FONT_URLS = ["ZettelSans-Regular.ttf", "ZettelSans-Bold.ttf"];
+
+  function toBase64(buf) {
+    const bytes = new Uint8Array(buf);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+
+  let fontsPromise = null;
+  function loadSheetFonts() {
+    if (!fontsPromise) {
+      fontsPromise = (async () => {
+        const [regular, bold] = await Promise.all(FONT_URLS.map(async url => {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`Schrift ${res.status}`);
+          return res.arrayBuffer();
+        }));
+        try {
+          const faces = [new FontFace("Zettel Sans", regular.slice(0), { weight: "400" }), new FontFace("Zettel Sans", bold.slice(0), { weight: "700" })];
+          await Promise.all(faces.map(f => f.load()));
+          faces.forEach(f => document.fonts.add(f));
+        } catch (err) { /* Vorschau nutzt dann eine Ersatzschrift */ }
+        return { regular: toBase64(regular), bold: toBase64(bold) };
+      })().catch(() => { fontsPromise = null; return null; });
+    }
+    return fontsPromise;
+  }
+
+  let jspdfPromise = null;
+  function loadJsPdf() {
+    if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
+    if (!jspdfPromise) {
+      jspdfPromise = new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = JSPDF_URL;
+        s.onload = () => resolve();
+        s.onerror = () => { jspdfPromise = null; s.remove(); reject(new Error("jspdf")); };
+        document.head.appendChild(s);
+      });
+    }
+    return jspdfPromise;
+  }
+
+  async function createPdf(y, m0) {
+    const [fonts] = await Promise.all([loadSheetFonts(), loadJsPdf()]);
+    const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
+    let family = "helvetica", scale = 0.9;
+    if (fonts) {
+      doc.addFileToVFS("ZettelSans-Regular.ttf", fonts.regular);
+      doc.addFont("ZettelSans-Regular.ttf", "ZettelSans", "normal");
+      doc.addFileToVFS("ZettelSans-Bold.ttf", fonts.bold);
+      doc.addFont("ZettelSans-Bold.ttf", "ZettelSans", "bold");
+      family = "ZettelSans";
+      scale = 1;
+    }
+    doc.setProperties({ title: `Stundenzettel ${MONTHS[m0]} ${y}`, subject: "Arbeitserfassung", author: state.name || "", creator: "Stundenzettel" });
+    doc.setLineCap("square");
+    doc.setDrawColor(0);
+    doc.setTextColor(0);
+    drawSheet(pdfRenderer(doc, family, scale), { y, m0, name: state.name, entries: state.entries });
+    return doc.output("blob");
+  }
+
+  /* ---------- Speicher auf diesem Gerät ---------- */
+  const STORE_KEY = "stundenzettel";
+
+  function storageWorks() {
+    try {
+      localStorage.setItem("stundenzettel-probe", "1");
+      localStorage.removeItem("stundenzettel-probe");
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function deviceStore() {
+    const read = () => {
+      try {
+        const d = JSON.parse(localStorage.getItem(STORE_KEY));
+        if (d && typeof d === "object") return { schichten: d.schichten || {}, einstellungen: d.einstellungen || {} };
+      } catch (err) { /* leer starten */ }
+      return { schichten: {}, einstellungen: {} };
+    };
+    let data = read();
+    const subs = { entries: new Set(), settings: new Set() };
+    const emit = () => {
+      const list = Object.entries(data.schichten);
+      subs.entries.forEach(cb => cb(list));
+      subs.settings.forEach(cb => cb(data.einstellungen));
+    };
+    const commit = next => {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(next)); }
+      catch (err) { throw { code: "storage" }; }
+      data = next;
+      emit();
+    };
+    const copy = () => JSON.parse(JSON.stringify(data));
+    window.addEventListener("storage", ev => { if (ev.key === STORE_KEY) { data = read(); emit(); } });
+    return {
+      watchEntries: next => { subs.entries.add(next); setTimeout(() => next(Object.entries(data.schichten)), 0); },
+      watchSettings: next => { subs.settings.add(next); setTimeout(() => next(data.einstellungen), 0); },
+      saveEntry: async (date, beginn, ende) => { const n = copy(); n.schichten[date] = { datum: date, beginn, ende, geaendert: new Date().toISOString() }; commit(n); },
+      deleteEntry: async date => { const n = copy(); delete n.schichten[date]; commit(n); },
+      saveSettings: async patch => { const n = copy(); n.einstellungen = Object.assign({}, n.einstellungen, patch); commit(n); },
+    };
+  }
+
+  const writeErrorText = () => "Speichern auf diesem Gerät hat nicht geklappt. Ist der Speicher voll?";
+
+  /* ---------- Zustand ---------- */
+  const $ = id => document.getElementById(id);
+  const el = {
+    who: $("who"), prev: $("prev"), next: $("next"), monthLabel: $("monthLabel"), banner: $("banner"),
+    entryTitle: $("entryTitle"), dateText: $("dateText"), today: $("today"), yesterday: $("yesterday"), date: $("date"),
+    start: $("start"), end: $("end"), duration: $("duration"), save: $("save"), del: $("del"), formMsg: $("formMsg"),
+    listTitle: $("listTitle"), summary: $("summary"), list: $("list"), empty: $("empty"),
+    sheetTitle: $("sheetTitle"), sheetFacts: $("sheetFacts"), paper: $("paper"), pdf: $("pdf"), pdfHint: $("pdfHint"),
+    importFold: $("importFold"), notes: $("notes"), parse: $("parse"), results: $("results"), apply: $("apply"),
+    name: $("name"), nameMsg: $("nameMsg"), csv: $("csv"), restore: $("restore"), backupInfo: $("backupInfo"), toast: $("toast"),
+  };
+
+  const now = new Date();
+  const state = {
+    entries: new Map(),
+    name: "",
+    lastBackup: "",
+    loaded: false,
+    mode: "starting", // starting | ready | unavailable
+    view: { y: now.getFullYear(), m0: now.getMonth() },
+    form: { date: todayIso(), start: "", end: "", existing: false, dirty: false },
+    importItems: [],
+  };
+  let store = null;
+  let preparedPdf = null;
+  const writable = () => state.mode === "ready";
+
+  const isStandalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+  function updateBanner() {
+    let text = "", warn = false;
+    if (state.mode === "unavailable") {
+      text = "Dieser Browser erlaubt hier kein Speichern. Öffne den Stundenzettel in Safari, nicht im privaten Modus.";
+      warn = true;
+    } else if (!isStandalone && isIOS) {
+      text = "Leg den Stundenzettel auf deinen Home-Bildschirm: Teilen, dann „Zum Home-Bildschirm“. Einträge, die du hier in Safari machst, erscheinen nicht in der App.";
+    } else if (!isStandalone) {
+      text = "Einträge werden in diesem Browser gespeichert, getrennt von der App auf deinem iPhone.";
+    }
+    el.banner.hidden = !text;
+    el.banner.textContent = text;
+    el.banner.classList.toggle("warn", warn);
+  }
+
+  function setMode(mode) {
+    state.mode = mode;
+    if (mode === "unavailable") state.loaded = true;
+    updateBanner();
+    renderAll();
+  }
+
+  function setEntries(list) {
+    const map = new Map();
+    for (const [id, v] of list) {
+      if (isIsoDate(id) && v && isTime(v.beginn) && isTime(v.ende) && toMin(v.ende) > toMin(v.beginn)) map.set(id, { beginn: v.beginn, ende: v.ende });
+    }
+    state.entries = map;
+    state.loaded = true;
+    preparedPdf = null;
+    if (!state.form.dirty) selectDate(state.form.date);
+    if (state.importItems.length) markImportStatus();
+    renderAll();
+  }
+
+  function setSettings(data) {
+    state.name = typeof data.name === "string" ? data.name : "";
+    state.lastBackup = typeof data.letzteSicherung === "string" ? data.letzteSicherung : "";
+    preparedPdf = null;
+    if (document.activeElement !== el.name) el.name.value = state.name;
+    renderAll();
+  }
+
+  /* ---------- Formular ---------- */
+  function suggestTimes(date) {
+    const keys = [...state.entries.keys()].sort();
+    const before = keys.filter(k => k < date);
+    const lastKey = before.length ? before[before.length - 1] : keys[keys.length - 1];
+    const last = lastKey ? state.entries.get(lastKey) : null;
+    const start = last ? last.beginn : "15:00";
+    const dur = last ? durMin(last) : 150;
+    let end = null;
+    if (date === todayIso()) {
+      const t = new Date();
+      const rounded = Math.round((t.getHours() * 60 + t.getMinutes()) / 15) * 15;
+      const diff = rounded - toMin(start);
+      if (diff >= 30 && diff <= 600 && rounded < 1440) end = fromMin(rounded);
+    }
+    if (!end) end = fromMin(Math.min(toMin(start) + dur, 23 * 60 + 45));
+    return { start, end };
+  }
+
+  function selectDate(date) {
+    const f = state.form;
+    f.date = date;
+    const e = state.entries.get(date);
+    if (e) {
+      f.start = e.beginn; f.end = e.ende; f.existing = true;
+    } else {
+      const s = suggestTimes(date);
+      f.start = s.start; f.end = s.end; f.existing = false;
+    }
+    f.dirty = false;
+    disarmDelete();
+    el.date.value = date;
+    el.start.value = f.start;
+    el.end.value = f.end;
+    setFormMsg("");
+    renderForm();
+  }
+
+  function formProblem() {
+    const f = state.form;
+    if (!isIsoDate(f.date)) return "Bitte ein Datum wählen.";
+    if (!isTime(f.start) || !isTime(f.end)) return "Bitte Beginn und Ende eintragen.";
+    if (toMin(f.end) <= toMin(f.start)) return "Das Ende muss nach dem Beginn liegen.";
+    return "";
+  }
+
+  function setFormMsg(text, isError) {
+    el.formMsg.textContent = text;
+    el.formMsg.classList.toggle("err", !!isError);
+  }
+
+  function renderForm() {
+    const f = state.form;
+    el.dateText.textContent = isIsoDate(f.date) ? longDate(f.date) : "Datum wählen";
+    el.entryTitle.textContent = f.existing ? "Schicht bearbeiten" : "Schicht eintragen";
+    el.today.setAttribute("aria-pressed", String(f.date === todayIso()));
+    el.yesterday.setAttribute("aria-pressed", String(f.date === addDays(todayIso(), -1)));
+    el.del.hidden = !f.existing || !writable();
+    el.save.textContent = f.existing ? "Änderung speichern" : "Speichern";
+    const problem = formProblem();
+    el.duration.textContent = problem ? "–" : hoursLabel(toMin(f.end) - toMin(f.start));
+    el.save.disabled = !!problem || !writable();
+    if (problem && f.dirty && isTime(f.start) && isTime(f.end)) setFormMsg(problem, true);
+    else if (el.formMsg.classList.contains("err") && !problem) setFormMsg("");
+    for (const row of el.list.querySelectorAll(".row")) row.setAttribute("aria-current", String(row.dataset.date === f.date));
+  }
+
+  function stepTime(field, delta) {
+    const cur = toMin(state.form[field]);
+    const base = isNaN(cur) ? (field === "start" ? 900 : 1050) : cur;
+    const next = Math.max(0, Math.min(23 * 60 + 45, Math.round((base + delta) / 15) * 15));
+    state.form[field] = fromMin(next);
+    state.form.dirty = true;
+    el[field].value = state.form[field];
+    renderForm();
+  }
+
+  async function save() {
+    const problem = formProblem();
+    if (problem) { setFormMsg(problem, true); return; }
+    if (!writable() || !store) return;
+    const { date, start, end } = state.form;
+    el.save.disabled = true;
+    try {
+      await store.saveEntry(date, start, end);
+      state.form.existing = true;
+      state.form.dirty = false;
+      const dt = dateOf(date);
+      state.view = { y: dt.getFullYear(), m0: dt.getMonth() };
+      setFormMsg("");
+      toast(`Gespeichert: ${shortDate(date)}, ${start}–${end}`);
+      renderAll();
+    } catch (err) {
+      setFormMsg(writeErrorText(err), true);
+    } finally {
+      renderForm();
+    }
+  }
+
+  let deleteTimer = null;
+  function disarmDelete() {
+    clearTimeout(deleteTimer);
+    deleteTimer = null;
+    el.del.textContent = "Löschen";
+    el.del.classList.remove("armed");
+  }
+
+  async function removeEntry() {
+    if (!state.form.existing || !writable() || !store) return;
+    if (!deleteTimer) {
+      el.del.textContent = "Wirklich löschen?";
+      el.del.classList.add("armed");
+      deleteTimer = setTimeout(disarmDelete, 4000);
+      return;
+    }
+    disarmDelete();
+    const date = state.form.date;
+    try {
+      await store.deleteEntry(date);
+      toast(`Gelöscht: ${shortDate(date)}`);
+      selectDate(date);
+      renderAll();
+    } catch (err) {
+      setFormMsg(writeErrorText(err), true);
+    }
+  }
+
+  /* ---------- Monat und Zettel ---------- */
+  function monthItems(y, m0) {
+    const key = monthKey(y, m0);
+    return [...state.entries.entries()].filter(([k]) => k.startsWith(key)).sort(([a], [b]) => (a < b ? -1 : 1));
+  }
+
+  function renderList() {
+    const { y, m0 } = state.view;
+    const items = monthItems(y, m0);
+    const total = items.reduce((sum, [, e]) => sum + durMin(e), 0);
+    el.monthLabel.textContent = `${MONTHS[m0]} ${y}`;
+    el.listTitle.textContent = `${MONTHS[m0]} ${y}`;
+    el.summary.replaceChildren();
+    if (items.length) {
+      const b = document.createElement("b");
+      b.textContent = `${fmtHours(total)} Std.`;
+      el.summary.append(`${shiftsLabel(items.length)} · `, b);
+    }
+    el.list.replaceChildren(...items.map(([date, e]) => {
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "row";
+      btn.dataset.date = date;
+      btn.setAttribute("aria-current", String(date === state.form.date));
+      btn.setAttribute("aria-label", `${longDate(date)}, ${e.beginn} bis ${e.ende}, ${hoursLabel(durMin(e))}. Bearbeiten`);
+      for (const [cls, text] of [["d", shortDate(date)], ["t", `${e.beginn} – ${e.ende}`], ["h", fmtHours(durMin(e))]]) {
+        const span = document.createElement("span");
+        span.className = cls;
+        span.textContent = text;
+        btn.append(span);
+      }
+      li.append(btn);
+      return li;
+    }));
+    el.empty.hidden = items.length > 0;
+    el.empty.textContent = !state.loaded ? "Lade deine Einträge …" : `Noch keine Schicht im ${MONTHS[m0]} eingetragen.`;
+  }
+
+  function renderSheet() {
+    const { y, m0 } = state.view;
+    const R = svgRenderer();
+    drawSheet(R, { y, m0, name: state.name, entries: state.entries });
+    el.paper.innerHTML = R.markup(`Vorschau des Stundenzettels für ${MONTHS[m0]} ${y}`);
+    const items = monthItems(y, m0);
+    const total = items.reduce((sum, [, e]) => sum + durMin(e), 0);
+    el.sheetTitle.textContent = `Zettel für ${MONTHS[m0]} ${y}`;
+    el.sheetFacts.textContent = items.length ? `${shiftsLabel(items.length)}, ${fmtHours(total)} Std.` : "noch ohne Einträge";
+    if (!el.pdf.disabled) el.pdf.textContent = preparedPdf && preparedPdf.key === `${y}-${m0}` ? "PDF teilen" : `PDF für ${MONTHS[m0]} erstellen`;
+  }
+
+  function renderAll() {
+    el.who.textContent = state.name ? `Arbeitserfassung · ${state.name}` : "Arbeitserfassung";
+    renderList();
+    renderSheet();
+    renderForm();
+    el.csv.disabled = !state.entries.size;
+    el.name.disabled = !writable();
+    el.apply.disabled = !writable();
+    el.backupInfo.textContent = state.lastBackup ? `Letzte Sicherung: ${dotDate(state.lastBackup)}` : "Noch keine Sicherung gemacht.";
+  }
+
+  function moveMonth(delta) {
+    const dt = new Date(state.view.y, state.view.m0 + delta, 1);
+    state.view = { y: dt.getFullYear(), m0: dt.getMonth() };
+    renderAll();
+  }
+
+  /* ---------- Dateien teilen ---------- */
+  async function offerFile(filename, data, type) {
+    const blob = data instanceof Blob ? data : new Blob([data], { type });
+    let file = null;
+    try { file = new File([blob], filename, { type }); } catch (err) { file = null; }
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file] });
+      return "shared";
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return "downloaded";
+  }
+
+  async function deliverPdf(prepared) {
+    const { y, m0 } = prepared;
+    try {
+      const how = await offerFile(pdfFileName(y, m0), prepared.blob, "application/pdf");
+      preparedPdf = null;
+      el.pdfHint.textContent = how === "shared" ? "Im Teilen-Menü findest du „Drucken“." : "Das PDF ist in deinen Downloads.";
+    } catch (err) {
+      if (err && err.name === "NotAllowedError") {
+        preparedPdf = prepared;
+        el.pdfHint.textContent = "Das PDF ist fertig. Tippe noch einmal, um es zu teilen oder zu drucken.";
+      } else if (err && err.name === "AbortError") {
+        preparedPdf = null;
+      } else {
+        preparedPdf = null;
+        el.pdfHint.textContent = "Teilen hat nicht geklappt. Versuch es nochmal.";
+      }
+    }
+    renderSheet();
+  }
+
+  async function makePdf() {
+    const { y, m0 } = state.view;
+    const key = `${y}-${m0}`;
+    if (preparedPdf && preparedPdf.key === key) { await deliverPdf(preparedPdf); return; }
+    el.pdf.disabled = true;
+    el.pdf.textContent = "PDF wird erstellt …";
+    let blob = null;
+    try {
+      blob = await createPdf(y, m0);
+    } catch (err) {
+      el.pdfHint.textContent = "Das PDF konnte nicht erstellt werden. Beim allerersten Mal braucht die App Internet.";
+    }
+    el.pdf.disabled = false;
+    if (blob) await deliverPdf({ key, y, m0, blob });
+    else renderSheet();
+  }
+
+  async function exportCsv() {
+    const rows = [...state.entries.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([date, e]) =>
+      [dotDate(date), WEEKDAYS[dateOf(date).getDay()], e.beginn, e.ende, fmtHours(durMin(e))].join(";"));
+    const csv = "﻿" + ["Datum;Wochentag;Beginn;Ende;Stunden", ...rows].join("\r\n") + "\r\n";
+    try {
+      await offerFile(`Stundenzettel Sicherung ${todayIso()}.csv`, csv, "text/csv");
+      if (store) await store.saveSettings({ letzteSicherung: todayIso() });
+      toast("Sicherung ist fertig.");
+    } catch (err) {
+      if (!err || err.name !== "AbortError") toast("Sichern hat nicht geklappt. Versuch es nochmal.");
+    }
+  }
+
+  async function restoreBackup() {
+    const file = el.restore.files && el.restore.files[0];
+    if (!file) return;
+    let text = "";
+    try { text = await file.text(); } catch (err) { toast("Die Datei konnte nicht gelesen werden."); return; }
+    el.restore.value = "";
+    const lines = text.replace(/^﻿/, "").split(/\r?\n/).map(line => {
+      const parts = line.split(";").map(s => s.trim());
+      if (parts.length >= 4 && /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(parts[0]) && isTime(parts[2]) && isTime(parts[3])) return `${parts[0]} ${parts[2]}-${parts[3]}`;
+      return /^datum;/i.test(line.trim()) ? "" : line.trim();
+    }).filter(Boolean);
+    el.notes.value = lines.join("\n");
+    el.importFold.open = true;
+    runParse();
+    el.importFold.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    toast("Sicherung geladen. Prüfe die Liste und tippe auf Übernehmen.");
+  }
+
+  /* ---------- Notizen übernehmen ---------- */
+  function parseNotes(text) {
+    const items = [];
+    const byDate = new Map();
+    const today = new Date();
+    for (const raw of text.split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line) continue;
+      const s = line.replace(/[–—−]/g, "-").replace(/\bbis\b/gi, "-").replace(/\buhr\b/gi, " ");
+      const dm = /(\d{1,2})\.(\d{1,2})\.?(\d{4}|\d{2}(?![\d:.]))?/.exec(s);
+      if (!dm) { items.push({ line, ok: false, msg: "Kein Datum erkannt" }); continue; }
+      const tm = /(\d{1,2})(?:[:.](\d{2}))?\s*-\s*(\d{1,2})(?:[:.](\d{2}))?/.exec(s.slice(dm.index + dm[0].length));
+      if (!tm) { items.push({ line, ok: false, msg: "Keine Uhrzeit erkannt" }); continue; }
+      const day = +dm[1], month = +dm[2];
+      let year = dm[3] ? +dm[3] : null;
+      if (year !== null && year < 100) year += 2000;
+      if (year === null) {
+        year = today.getFullYear();
+        if (new Date(year, month - 1, day) - today > 45 * 864e5) year -= 1;
+      }
+      const dt = new Date(year, month - 1, day);
+      if (month < 1 || month > 12 || dt.getMonth() !== month - 1 || dt.getDate() !== day) { items.push({ line, ok: false, msg: "Datum gibt es nicht" }); continue; }
+      const sh = +tm[1], sm = tm[2] ? +tm[2] : 0, eh = +tm[3], em = tm[4] ? +tm[4] : 0;
+      if (sh > 23 || eh > 23 || sm > 59 || em > 59) { items.push({ line, ok: false, msg: "Uhrzeit ungültig" }); continue; }
+      const start = fromMin(sh * 60 + sm), end = fromMin(eh * 60 + em);
+      if (toMin(end) <= toMin(start)) { items.push({ line, ok: false, msg: "Ende liegt vor dem Beginn" }); continue; }
+      const date = isoOf(dt);
+      const item = { line, ok: true, date, start, end };
+      const earlier = byDate.get(date);
+      if (earlier) { earlier.ok = false; earlier.msg = "Doppelt, die spätere Zeile zählt"; }
+      byDate.set(date, item);
+      items.push(item);
+    }
+    return items;
+  }
+
+  function markImportStatus() {
+    for (const it of state.importItems) {
+      if (!it.ok) continue;
+      const ex = state.entries.get(it.date);
+      it.status = !ex ? "new" : (ex.beginn === it.start && ex.ende === it.end ? "same" : "chg");
+      it.prev = ex;
+    }
+    renderImport();
+  }
+
+  function renderImport() {
+    const items = state.importItems;
+    const thisYear = new Date().getFullYear();
+    el.results.replaceChildren(...items.map(it => {
+      const li = document.createElement("li");
+      const ico = document.createElement("span");
+      ico.className = "ico";
+      const main = document.createElement("span");
+      main.className = "main";
+      const sub = document.createElement("span");
+      sub.className = "sub";
+      if (!it.ok) {
+        li.className = "is-bad";
+        ico.textContent = "✗";
+        main.textContent = it.line;
+        sub.textContent = it.msg;
+      } else {
+        const year = dateOf(it.date).getFullYear();
+        li.className = { new: "is-new", chg: "is-chg", same: "is-same" }[it.status];
+        ico.textContent = { new: "+", chg: "↻", same: "=" }[it.status];
+        main.textContent = `${shortDate(it.date)}${year !== thisYear ? year : ""}  ${it.start} – ${it.end}  (${fmtHours(toMin(it.end) - toMin(it.start))} Std.)`;
+        sub.textContent = it.status === "new" ? "neu" : it.status === "same" ? "schon gespeichert" : `ersetzt ${it.prev.beginn} – ${it.prev.ende}`;
+      }
+      main.append(sub);
+      li.append(ico, main);
+      return li;
+    }));
+    const todo = items.filter(it => it.ok && it.status !== "same").length;
+    el.apply.hidden = todo === 0;
+    el.apply.textContent = todo === 1 ? "1 Eintrag übernehmen" : `${todo} Einträge übernehmen`;
+    el.apply.disabled = !writable();
+  }
+
+  function runParse() {
+    state.importItems = parseNotes(el.notes.value);
+    if (!state.importItems.length) {
+      el.results.replaceChildren();
+      el.apply.hidden = true;
+      toast("Keine Zeilen gefunden.");
+      return;
+    }
+    markImportStatus();
+  }
+
+  async function applyImport() {
+    if (!writable() || !store) return;
+    const todo = state.importItems.filter(it => it.ok && it.status !== "same");
+    el.apply.disabled = true;
+    let done = 0;
+    try {
+      for (const it of todo) {
+        await store.saveEntry(it.date, it.start, it.end);
+        done++;
+      }
+      toast(done === 1 ? "1 Eintrag übernommen." : `${done} Einträge übernommen.`);
+      if (todo.length) {
+        const last = dateOf(todo[todo.length - 1].date);
+        state.view = { y: last.getFullYear(), m0: last.getMonth() };
+      }
+    } catch (err) {
+      toast(`${done} übernommen. ${writeErrorText(err)}`);
+    }
+    if (!state.form.dirty) selectDate(state.form.date);
+    markImportStatus();
+    renderAll();
+  }
+
+  /* ---------- Name ---------- */
+  async function saveName() {
+    const name = el.name.value.trim().replace(/\s+/g, " ").slice(0, 80);
+    el.name.value = name;
+    if (name === state.name || !writable() || !store) return;
+    try {
+      await store.saveSettings({ name });
+      el.nameMsg.textContent = "Gespeichert.";
+      el.nameMsg.classList.remove("err");
+    } catch (err) {
+      el.nameMsg.textContent = writeErrorText(err);
+      el.nameMsg.classList.add("err");
+    }
+  }
+
+  /* ---------- Hinweis unten ---------- */
+  let toastTimer = null;
+  function toast(text) {
+    el.toast.textContent = text;
+    el.toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.toast.classList.remove("show"), 2800);
+  }
+
+  /* ---------- Ereignisse ---------- */
+  el.prev.addEventListener("click", () => moveMonth(-1));
+  el.next.addEventListener("click", () => moveMonth(1));
+  el.today.addEventListener("click", () => selectDate(todayIso()));
+  el.yesterday.addEventListener("click", () => selectDate(addDays(todayIso(), -1)));
+  el.date.addEventListener("change", () => { if (isIsoDate(el.date.value)) selectDate(el.date.value); });
+  for (const field of ["start", "end"]) {
+    el[field].addEventListener("input", () => {
+      state.form[field] = el[field].value;
+      state.form.dirty = true;
+      renderForm();
+    });
+  }
+  document.querySelectorAll(".step").forEach(btn => btn.addEventListener("click", () => stepTime(btn.dataset.field, Number(btn.dataset.delta))));
+  el.save.addEventListener("click", save);
+  el.del.addEventListener("click", removeEntry);
+  el.list.addEventListener("click", ev => {
+    const row = ev.target.closest(".row");
+    if (!row) return;
+    selectDate(row.dataset.date);
+    const top = el.entryTitle.closest(".entry");
+    if (top.getBoundingClientRect().top < 0) top.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  });
+  el.pdf.addEventListener("click", makePdf);
+  el.csv.addEventListener("click", exportCsv);
+  el.restore.addEventListener("change", restoreBackup);
+  el.parse.addEventListener("click", runParse);
+  el.apply.addEventListener("click", applyImport);
+  el.name.addEventListener("change", saveName);
+  el.name.addEventListener("keydown", ev => { if (ev.key === "Enter") el.name.blur(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && !state.form.dirty && !state.form.existing) selectDate(todayIso());
+  });
+
+  /* ---------- Start ---------- */
+  function boot() {
+    selectDate(state.form.date);
+    renderAll();
+    loadSheetFonts();
+    setTimeout(() => loadJsPdf().catch(() => {}), 1200);
+    if (!storageWorks()) { setMode("unavailable"); return; }
+    store = deviceStore();
+    store.watchEntries(setEntries);
+    store.watchSettings(setSettings);
+    setMode("ready");
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || /^(localhost|127\.0\.0\.1)$/.test(location.hostname))) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
